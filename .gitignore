@@ -1,0 +1,13 @@
+# Python compiled files
+__pycache__
+*.py[cod]
+
+# Dev env
+.venv
+venv
+
+# IDEs
+.vscode
+
+# Sphinx docs
+docs/_build
