@@ -25,19 +25,14 @@ SOFTWARE.
 from __future__ import annotations
 
 import random
-from typing import Literal, TypeVar, Union, overload
+from typing import TypeVar, Union, overload
 
 from PIL import Image
 
+from .types import *
 from .utils import BASE_DIR
 
-__all__ = ("Board",)
-
-
-Configuration = tuple[int, int, int]
-Index = Literal[0, 1, 2, 3, 4]
-Level = Literal[1, 2, 3, 4, 5, 6, 7, 8]
-Value = Literal[0, 1, 2, 3]
+__all__ = ("Board", "Square")
 
 
 _ST = TypeVar("_ST", bound="Square")

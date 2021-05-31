@@ -22,11 +22,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-__title__ = "vflip"
-__author__ = "Bijij"
-__license__ = "MIT"
-__copyright__ = "Copyright 2021-present Bijij"
-__version__ = "1.0.1"
+from __future__ import annotations
 
-from ._board import *
-from . import types as types
+from typing import Literal
+
+__all__ = ("Configuration", "Index", "Level", "Value")
+
+Configuration = tuple[int, int, int]
+Index = Literal[0, 1, 2, 3, 4]
+Level = Literal[1, 2, 3, 4, 5, 6, 7, 8]
+Value = Literal[0, 1, 2, 3]
