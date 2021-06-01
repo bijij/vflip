@@ -25,6 +25,8 @@ SOFTWARE.
 from __future__ import annotations
 
 import random
+from functools import reduce
+from operator import mul
 from typing import TypeVar, Union, overload
 
 from PIL import Image
@@ -39,7 +41,7 @@ _ST = TypeVar("_ST", bound="Square")
 
 
 VALUES: list[Value] = [0, 1, 2, 3]
-
+INDICIES: list[Index] = [0, 1, 2, 3, 4]
 
 # PIL templates
 
@@ -88,6 +90,7 @@ SQUARE_MARGIN = 10
 
 VALUE_OFFSET = (SQUARE_SIZE - VALUE_SIZE) // 2
 
+# Game configuration
 
 CONFIGURATIONS: dict[Level, list[Configuration]] = {
     1: [
@@ -152,7 +155,7 @@ CONFIGURATIONS: dict[Level, list[Configuration]] = {
 class Square:
     def __init__(self, value: Value) -> None:
         self.value: Value = value
-        self.flipped = False
+        self.flipped: bool = False
         self.notes: dict[Value, bool] = {value: False for value in VALUES}
 
     def note(self, value: Value) -> None:
@@ -197,7 +200,7 @@ class Square:
 
 class Line:
     def __init__(self, squares: list[Square]) -> None:
-        self.squares = squares
+        self.squares: list[Square] = squares
 
     @property
     def points(self) -> int:
@@ -225,64 +228,56 @@ class Board:
         n_2, n_3, n_0 = random.choice(CONFIGURATIONS[level])
         n_1 = 25 - (n_2 + n_3 + n_0)
 
-        values = []
-        for value, n in enumerate((n_0, n_1, n_2, n_3)):
-            values.extend(Square(value) for _ in range(n))  # type: ignore
-        random.shuffle(values)
+        squares = []
+        for value, n in zip(VALUES, (n_0, n_1, n_2, n_3)):
+            squares.extend(Square(value) for _ in range(n))  # type: ignore
+        random.shuffle(squares)
 
-        self.grid: list[list[Square]] = [[values[row * 5 + col] for col in range(5)] for row in range(5)]
+        self.grid: list[list[Square]] = [[squares[row * INDICIES[-1] + col] for col in INDICIES] for row in INDICIES]
         self.level: Level = level
 
     @overload
-    def __getitem__(self, index=tuple[Index, Index]) -> Square:
+    def __getitem__(self, index: tuple[slice, slice]) -> list[list[Square]]:
         ...
 
     @overload
-    def __getitem__(self, index=tuple[slice, Index]) -> list[Square]:
+    def __getitem__(self, index: tuple[slice, Index]) -> list[Square]:
         ...
 
     @overload
-    def __getitem__(self, index=tuple[Index, slice]) -> list[Square]:
+    def __getitem__(self, index: tuple[Index, slice]) -> list[Square]:
         ...
 
     @overload
-    def __getitem__(self, index=tuple[slice, slice]) -> list[list[Square]]:
+    def __getitem__(self, index: tuple[Index, Index]) -> Square:
         ...
 
     def __getitem__(
-        self, index=tuple[Union[Index, slice], Union[Index, slice]]
+        self, index: tuple[Union[Index, slice], Union[Index, slice]]
     ) -> Union[Square, list[Square], list[list[Square]]]:
         row, col = index
-        return self.grid[row][col]
+
+        if isinstance(row, slice):
+            rows = self.grid[row]
+            return [row[col] for row in rows]  # type: ignore
+
+        return self.grid[row][col]  # type: ignore
 
     @property
     def rows(self) -> list[Line]:
-        lines = []
-        for row in range(5):
-            lines.append(Line(self.grid[row]))
-        return lines
+        return [Line(self[row, :]) for row in INDICIES]
 
     @property
     def cols(self) -> list[Line]:
-        lines = []
-        for col in range(5):
-            lines.append(Line([self.grid[row][col] for row in range(5)]))
-        return lines
+        return [Line(self[:, col]) for col in INDICIES]
 
     @property
     def squares(self) -> list[Square]:
-        squares = []
-        for row in self.rows:
-            squares.extend(row.squares)
-        return squares
+        return [square for row in self.grid for square in row]
 
     @property
     def points(self) -> int:
-        total = 1
-        for square in self.squares:
-            if square.flipped:
-                total *= square.value
-        return total
+        return reduce(mul, [square.value for square in self.squares if square.flipped])
 
     @property
     def over(self) -> bool:
@@ -308,22 +303,21 @@ class Board:
 
         image = BOARD_TEMPLATE.copy()
 
-        # Populate squares
         y = SQUARE_OFFSET
         for row in self.rows:
             x = SQUARE_OFFSET
-            for col in range(5):
-                square = row.squares[col]._render()
-                image.paste(square, (x, y))
+            for square in row.squares:
+                s = square._render()
+                image.paste(s, (x, y), s)
                 x += SQUARE_SIZE + SQUARE_MARGIN
-            line = row._render()
-            image.paste(line, (x - 1, y - 1), line)
+            l = row._render()
+            image.paste(l, (x - 1, y - 1), l)
             y += SQUARE_SIZE + SQUARE_MARGIN
 
         x = SQUARE_OFFSET
         for col in self.cols:
-            line = col._render()
-            image.paste(line, (x - 1, y - 1), line)
+            l = col._render()
+            image.paste(l, (x - 1, y - 1), l)
             x += SQUARE_SIZE + SQUARE_MARGIN
 
         return image
