@@ -233,7 +233,7 @@ class Board:
             squares.extend(Square(value) for _ in range(n))  # type: ignore
         random.shuffle(squares)
 
-        self.grid: list[list[Square]] = [[squares[row * INDICIES[-1] + col] for col in INDICIES] for row in INDICIES]
+        self.grid: list[list[Square]] = [[squares[row * len(INDICIES) + col] for col in INDICIES] for row in INDICIES]
         self.level: Level = level
 
     @overload
