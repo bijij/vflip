@@ -27,18 +27,14 @@ from __future__ import annotations
 import random
 from functools import reduce
 from operator import mul
-from typing import TypeVar, Union, overload
 
+from boardgames import Board as BoardBase, Cell as CellBase
 from PIL import Image
 
 from .types import *
 from .utils import BASE_DIR
 
 __all__ = ("Board", "Square")
-
-
-_ST = TypeVar("_ST", bound="Square")
-
 
 VALUES: list[Value] = [0, 1, 2, 3]
 INDICIES: list[Index] = [0, 1, 2, 3, 4]
@@ -152,11 +148,17 @@ CONFIGURATIONS: dict[Level, list[Configuration]] = {
 }
 
 
-class Square:
-    def __init__(self, value: Value) -> None:
-        self.value: Value = value
+class Square(CellBase):
+    board: Board
+    value: Value
+
+    def __init__(self, board: Board, row: int, col: int) -> None:
+        super().__init__(board, row, col)
         self.flipped: bool = False
         self.notes: dict[Value, bool] = {value: False for value in VALUES}
+
+    def set_value(self, value: Value):
+        self.value = value
 
     def note(self, value: Value) -> None:
         if self.flipped:
@@ -193,22 +195,19 @@ class Square:
     def __repr__(self) -> str:
         return "<Square value={0.value} >".format(self)
 
-    @classmethod
-    def random(cls: type[_ST]) -> _ST:
-        return cls(random.choice(VALUES))
 
-
-class Line:
-    def __init__(self, squares: list[Square]) -> None:
-        self.squares: list[Square] = squares
+class Line(list[Square]):
+    @property
+    def squares(self) -> list[Square]:
+        return [*self]
 
     @property
     def points(self) -> int:
-        return sum(square.value for square in self.squares)
+        return sum(square.value for square in self)
 
     @property
     def voltorbs(self) -> int:
-        return sum(square.value == 0 for square in self.squares)
+        return sum(square.value == 0 for square in self)
 
     def _render(self) -> Image.Image:
         image = LINE_TEMPLATE.copy()
@@ -223,57 +222,34 @@ class Line:
         return image
 
 
-class Board:
+class Board(BoardBase[Square]):
     def __init__(self, level: Level) -> None:
+        super().__init__(Square, 5, 5)
+
         n_2, n_3, n_0 = random.choice(CONFIGURATIONS[level])
         n_1 = 25 - (n_2 + n_3 + n_0)
 
-        squares = []
+        values = []
         for value, n in zip(VALUES, (n_0, n_1, n_2, n_3)):
-            squares.extend(Square(value) for _ in range(n))  # type: ignore
-        random.shuffle(squares)
+            values.extend(value for _ in range(n))  # type: ignore
+        random.shuffle(values)
 
-        self.grid: list[list[Square]] = [[squares[row * len(INDICIES) + col] for col in INDICIES] for row in INDICIES]
+        for square, value in zip(self.squares, values):
+            square.set_value(value)
+
         self.level: Level = level
-
-    @overload
-    def __getitem__(self, index: tuple[slice, slice]) -> list[list[Square]]:
-        ...
-
-    @overload
-    def __getitem__(self, index: tuple[slice, Index]) -> list[Square]:
-        ...
-
-    @overload
-    def __getitem__(self, index: tuple[Index, slice]) -> list[Square]:
-        ...
-
-    @overload
-    def __getitem__(self, index: tuple[Index, Index]) -> Square:
-        ...
-
-    def __getitem__(
-        self, index: tuple[Union[Index, slice], Union[Index, slice]]
-    ) -> Union[Square, list[Square], list[list[Square]]]:
-        row, col = index
-
-        if isinstance(row, slice):
-            rows = self.grid[row]
-            return [row[col] for row in rows]  # type: ignore
-
-        return self.grid[row][col]  # type: ignore
 
     @property
     def rows(self) -> list[Line]:
-        return [Line(self[row, :]) for row in INDICIES]
+        return [Line(row) for row in super().rows]
 
     @property
     def cols(self) -> list[Line]:
-        return [Line(self[:, col]) for col in INDICIES]
+        return [Line(col) for col in super().cols]
 
     @property
     def squares(self) -> list[Square]:
-        return [square for row in self.grid for square in row]
+        return self.cells
 
     @property
     def points(self) -> int:

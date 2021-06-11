@@ -49,4 +49,4 @@ jobs:
       run: poetry run black --check .
     
     - name: Type check files
-      run: pyright .
+      run: pyright --lib
