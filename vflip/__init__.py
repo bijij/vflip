@@ -26,7 +26,7 @@ __title__ = "vflip"
 __author__ = "Bijij"
 __license__ = "MIT"
 __copyright__ = "Copyright 2021-present Bijij"
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 
 from ._board import *
 from . import types as types

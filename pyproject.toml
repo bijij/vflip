@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "vflip"
-version = "1.1.0"
+version = "1.2.0"
 description = "Voltorb Flip engine and renderer"
 authors = ["bijij <josh@josh-is.gay>"]
 license = "MIT"
@@ -12,7 +12,7 @@ packages = [
 [tool.poetry.dependencies]
 python = "^3.9"
 boardgames = "^1.0.0"
-Pillow = "^8.0.0"
+Pillow = ">=8.0.0"
 
 [tool.poetry.dev-dependencies]
 black = "^21.0b1"
